@@ -11,8 +11,7 @@ import (
 	"net/http"
 	"os"
 	"testing"
-
-	"github.com/gofunct/gotilities/synced/errsync"
+	"github.pie.apple.com/coleman-ward/interceptr/syncr"
 )
 
 var (
