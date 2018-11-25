@@ -14,8 +14,21 @@ import (
 	"time"
 )
 
-// Check is a health/readiness check.
-type Check func() error
+type ProbeUtil interface {
+	MakeProbe(registry prometheus.Registerer, namespace string) Handler
+}
+
+type Prober struct{}
+
+// NewMetricsHandler returns a healthcheck Handler that also exposes metrics
+// into the provided Prometheus registry.
+func (g *Prober) MakeProbe(registry prometheus.Registerer, namespace string) Handler {
+	return &metricsHandler{
+		handler:   NewHandler(),
+		registry:  registry,
+		namespace: namespace,
+	}
+}
 
 type Handler interface {
 	http.Handler
@@ -28,6 +41,9 @@ type Handler interface {
 
 	ReadyEndpoint(http.ResponseWriter, *http.Request)
 }
+
+// Check is a health/readiness check.
+type Check func() error
 
 var ErrNoData = errors.New("no data yet")
 
@@ -238,16 +254,6 @@ type metricsHandler struct {
 	handler   Handler
 	registry  prometheus.Registerer
 	namespace string
-}
-
-// NewMetricsHandler returns a healthcheck Handler that also exposes metrics
-// into the provided Prometheus registry.
-func (g *Gotility) MakeProbe(registry prometheus.Registerer, namespace string) Handler {
-	return &metricsHandler{
-		handler:   NewHandler(),
-		registry:  registry,
-		namespace: namespace,
-	}
 }
 
 func (h *metricsHandler) AddLivenessCheck(name string, check Check) {

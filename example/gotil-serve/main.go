@@ -22,14 +22,15 @@ func (s *DemoServiceServer) SayHello(ctx context.Context, request *pb.HelloReque
 	return &pb.HelloResponse{Message: fmt.Sprintf("Hello %s", request.Name)}, nil
 }
 
-var gotility *gotilities.Gotility
+var gotility gotilities.Gotility
 
 func main() {
-	ctx, cancel, errsync := gotility.MakeErrGrpWithDeadline(30)
+
+	ctx, cancel, errsync := gotility.MakeErrGrpWithDeadline(120)
 
 	defer cancel()
 
-	logger, err := gotility.MakeZapper()
+	logger, err := gotility.MakeZapper(true)
 
 	gotility.ZapErr(logger, "failed to create logger", err)
 
@@ -41,8 +42,7 @@ func main() {
 
 	defer closer.Close()
 
-	metrics := gotility.MakeMetrics(true)
-
+	metrics := gotility.RegGrpcServerMetrics(true)
 	probe := gotility.MakeProbe(prometheus.DefaultRegisterer, "demo")
 
 	probe.AddLivenessCheck("routine_threshold", gotilities.GoroutineCountCheck(500))

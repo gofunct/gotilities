@@ -9,7 +9,9 @@ require (
 	github.com/golang/protobuf v1.2.0
 	github.com/grpc-ecosystem/go-grpc-middleware v1.0.0
 	github.com/matttproud/golang_protobuf_extensions v1.0.1 // indirect
+	github.com/mwitkow/go-conntrack v0.0.0-20161129095857-cc309e4a2223
 	github.com/mwitkow/go-grpc-middleware v1.0.0
+	github.com/opentracing-contrib/go-grpc v0.0.0-20180928155321-4b5a12d3ff02
 	github.com/opentracing/opentracing-go v1.0.2
 	github.com/piotrkowalczuk/promgrpc v2.0.2+incompatible
 	github.com/pkg/errors v0.8.0 // indirect

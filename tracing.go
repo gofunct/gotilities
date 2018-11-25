@@ -9,7 +9,13 @@ import (
 	"io"
 )
 
-func (g *Gotility) MakeTracer(name string, logger *zap.Logger) (opentracing.Tracer, io.Closer, error) {
+type TraceUtil interface {
+	MakeTracer(name string, logger *zap.Logger) (opentracing.Tracer, io.Closer, error)
+}
+
+type Tracer struct{}
+
+func (g *Tracer) MakeTracer(name string, logger *zap.Logger) (opentracing.Tracer, io.Closer, error) {
 	jfactory := jprom.New()
 	cfg, err := config.FromEnv()
 
