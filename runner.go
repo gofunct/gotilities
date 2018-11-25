@@ -84,7 +84,7 @@ func (g *Gotility) MakeGrpcServer(l *zap.Logger, tracer opentracing.Tracer, icpt
 
 }
 
-func (g *Gotility) MakeDebugServer(mux *http.ServeMux, ctx context.Context, server *grpc.Server, check Handler, logger *zap.Logger) *http.Server {
+func (g *Gotility) MakeDebugServer(port string, mux *http.ServeMux, ctx context.Context, server *grpc.Server, check Handler, logger *zap.Logger) *http.Server {
 
 	mux.HandleFunc("/ready", check.ReadyEndpoint)
 	mux.HandleFunc("/live", check.LiveEndpoint)
@@ -96,7 +96,7 @@ func (g *Gotility) MakeDebugServer(mux *http.ServeMux, ctx context.Context, serv
 	mux.Handle("/metrics", promhttp.Handler())
 
 	return &http.Server{
-		Addr:    g.Port,
+		Addr:    port,
 		Handler: GrpcHandlerFunc(server, mux),
 	}
 }

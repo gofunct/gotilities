@@ -4,7 +4,6 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"github.pie.apple.com/coleman-ward/interceptr/utilz"
 	"net/http"
 	"os"
 	"testing"
@@ -29,7 +28,7 @@ func fakeSearch(kind string) Search {
 // simplify goroutine counting and error handling. This example is derived from
 // the sync.WaitGroup example at https://golang.org/pkg/sync/#example_WaitGroup.
 func ExampleGroup_justErrors() {
-	var g utilz.Group
+	var g Group
 	var urls = []string{
 		"http://www.golang.org/",
 		"http://www.google.com/",
@@ -59,7 +58,7 @@ func ExampleGroup_justErrors() {
 // and error-handling.
 func ExampleGroup_parallel() {
 	Google := func(ctx context.Context, query string) ([]Result, error) {
-		g, ctx := utilz.WithContext(ctx)
+		g, ctx := WithContext(ctx)
 
 		searches := []Search{Web, Image, Video}
 		results := make([]Result, len(searches))
@@ -109,7 +108,7 @@ func TestZeroGroup(t *testing.T) {
 	}
 
 	for _, tc := range cases {
-		var g utilz.Group
+		var g Group
 
 		var firstErr error
 		for i, err := range tc.errs {
@@ -143,7 +142,7 @@ func TestWithContext(t *testing.T) {
 	}
 
 	for _, tc := range cases {
-		g, ctx := utilz.WithContext(context.Background())
+		g, ctx := WithContext(context.Background())
 
 		for _, err := range tc.errs {
 			err := err

@@ -9,7 +9,7 @@ import (
 	"io"
 )
 
-func (g *Gotility) MakeTracer(service string, logger *zap.Logger) (opentracing.Tracer, io.Closer, error) {
+func (g *Gotility) MakeTracer(name string, logger *zap.Logger) (opentracing.Tracer, io.Closer, error) {
 	jfactory := jprom.New()
 	cfg, err := config.FromEnv()
 
@@ -19,7 +19,7 @@ func (g *Gotility) MakeTracer(service string, logger *zap.Logger) (opentracing.T
 
 	cfg.Sampler.Type = "const"
 	cfg.Sampler.Param = 1
-	cfg.ServiceName = g.Namespace
+	cfg.ServiceName = name
 	cfg.RPCMetrics = true
 
 	tracer, closer, err := cfg.NewTracer(

@@ -2,7 +2,7 @@
 
 application = ping-serve
 object = $(application)
-commands = ping
+commands = pinger
 package = github.com/gofucnt/gotilities
 bin = $(shell pwd)/bin
 
@@ -35,14 +35,14 @@ clean: ## clean builds
 	rm -rf $(bin)
 
 ping: ## generate all protobufs in api/
-	@protoc -I proto/ proto/ping/ping.proto --go_out=plugins=grpc:proto
+		@protoc -I proto/ proto/ping/ping.proto --go_out=plugins=grpc:proto
 
 
 serve: ## run certd locally for testing
 	@bin/ping-serve
 
-ping: ## run certd locally for testing
-	@bin/ping
+pinger: ## run certd locally for testing
+	@bin/pinger
 
 
 help:   ## Show this help.

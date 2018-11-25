@@ -246,7 +246,7 @@ func (g *Gotility) MakeProbe(registry prometheus.Registerer, namespace string) H
 	return &metricsHandler{
 		handler:   NewHandler(),
 		registry:  registry,
-		namespace: g.Namespace,
+		namespace: namespace,
 	}
 }
 
