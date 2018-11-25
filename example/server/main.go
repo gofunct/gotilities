@@ -54,6 +54,11 @@ func main() {
 	probe.AddReadinessCheck("google-httpcheck",
 		gotilities.HTTPGetCheck("google.com", 500*time.Millisecond))
 
+	// Health check
+	probe.AddReadinessCheck(
+		"grpc",
+		gotilities.Timeout(func() error { return err }, time.Second*10))
+
 	grpcServer := gotility.MakeGrpcServer(logger, tracer, metrics)
 
 	pb.RegisterDemoServiceServer(grpcServer, newDemoServer())
