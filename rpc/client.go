@@ -27,8 +27,8 @@ func (c *Client) MakeGrpcClient(port string, tracer opentracing.Tracer, intercep
 			return net.DialTimeout("tcp", addr, timeout)
 		})),
 		grpc.WithUnaryInterceptor(grpc_middleware.ChainUnaryClient(
-			interceptor.UnaryClient(),
 			otgrpc.OpenTracingClientInterceptor(tracer),
+			interceptor.UnaryClient(),
 		)),
 
 		grpc.WithStreamInterceptor(grpc_middleware.ChainStreamClient(

@@ -6,10 +6,13 @@ import (
 	"fmt"
 	"github.com/gofunct/gotilities/gotility"
 	pb "github.com/gofunct/gotilities/proto/ping"
+	"github.com/mwitkow/go-conntrack"
 	"go.uber.org/zap"
+	"net/http"
 	"os"
 	"strings"
 	"time"
+	"net"
 )
 
 func main() {
@@ -56,4 +59,17 @@ func main() {
 			os.Exit(0)
 		}
 	}
+}
+
+
+func init() {
+	http.DefaultTransport.(*http.Transport).DialContext = conntrack.NewDialContextFunc(
+		conntrack.DialWithTracing(),
+		conntrack.DialWithDialer(&net.Dialer{
+			Timeout:   30,
+			KeepAlive: 30,
+		}),
+	)
+
+	conntrack.PreRegisterDialerMetrics("default")
 }
