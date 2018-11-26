@@ -258,13 +258,6 @@ func (m *MuxConn) doneSniffing() {
 	m.buf.reset(false)
 }
 
-func init() {
-	prom.MustRegister(dialerAttemptedTotal)
-	prom.MustRegister(dialerConnEstablishedTotal)
-	prom.MustRegister(dialerConnFailedTotal)
-	prom.MustRegister(dialerConnClosedTotal)
-}
-
 type failureReason string
 
 const (
@@ -523,11 +516,6 @@ var (
 			Help:      "Total number of connections closed that were made to the listener of a given name.",
 		}, []string{"listener_name"})
 )
-
-func init() {
-	prom.MustRegister(listenerAcceptedTotal)
-	prom.MustRegister(listenerClosedTotal)
-}
 
 // preRegisterListener pre-populates Prometheus labels for the given listener name, to avoid Prometheus missing labels issue.
 func preRegisterListenerMetrics(listenerName string) {

@@ -8,6 +8,7 @@ import (
 	"github.com/grpc-ecosystem/go-grpc-middleware/recovery"
 	"github.com/grpc-ecosystem/go-grpc-middleware/tags"
 	"github.com/grpc-ecosystem/go-grpc-middleware/validator"
+	"github.com/heptiolabs/healthcheck"
 	"github.com/mwitkow/go-conntrack"
 	"github.com/mwitkow/go-grpc-middleware/logging/zap"
 	"github.com/opentracing/opentracing-go"
@@ -31,20 +32,6 @@ import (
 	"strings"
 	"time"
 )
-
-type ServerUtil interface {
-	RegGrpcServerMetrics(trackpeers bool) *promgrpc.Interceptor
-	RateLimitingServerInterceptor(r rate.Limit, b int) grpc.UnaryServerInterceptor
-	CheckClientIsLocal(ctx context.Context, req interface{}, info *grpc.UnaryServerInfo, handler grpc.UnaryHandler) (resp interface{}, err error)
-	TlsConfigForServerCerts(certFile string, keyFile string) (*tls.Config, error)
-	TlsConfigWithHttp2Enabled(config *tls.Config) (*tls.Config, error)
-	MakeGrpcTLSServer(l *zap.Logger, tracer opentracing.Tracer, icpt *promgrpc.Interceptor, tls credentials.TransportCredentials) *grpc.Server
-	MakeGrpcServer(l *zap.Logger, tracer opentracing.Tracer, icpt *promgrpc.Interceptor) *grpc.Server
-	MakeDebugServer(port string, mux *http.ServeMux, ctx context.Context, server *grpc.Server, check Handler, logger *zap.Logger) *http.Server
-	StartDynamicServer(port string, ctx context.Context, logger *zap.Logger, server *http.Server, gserver *grpc.Server) error
-	StartDynamicTLSServer(port string, ctx context.Context, logger *zap.Logger, server *http.Server, tls string, cert string, gserver *grpc.Server) error
-	GrpcHandlerFunc(grpcServer *grpc.Server, otherHandler http.Handler) http.Handler
-}
 
 type Server struct{}
 
@@ -180,17 +167,7 @@ func (g *Server) MakeGrpcServer(l *zap.Logger, tracer opentracing.Tracer, icpt *
 
 }
 
-func (g *Server) MakeDebugServer(port string, mux *http.ServeMux, ctx context.Context, server *grpc.Server, check Handler, logger *zap.Logger) *http.Server {
-
-	http.DefaultTransport.(*http.Transport).DialContext = conntrack.NewDialContextFunc(
-		conntrack.DialWithTracing(),
-		conntrack.DialWithDialer(&net.Dialer{
-			Timeout:   30,
-			KeepAlive: 30,
-		}),
-	)
-
-	conntrack.PreRegisterDialerMetrics("default")
+func (g *Server) MakeDebugServer(mux *http.ServeMux, ctx context.Context, server *grpc.Server, check healthcheck.Handler, logger *zap.Logger) *http.Server {
 
 	mux.HandleFunc("/ready", check.ReadyEndpoint)
 	mux.HandleFunc("/live", check.LiveEndpoint)
@@ -202,34 +179,24 @@ func (g *Server) MakeDebugServer(port string, mux *http.ServeMux, ctx context.Co
 	mux.Handle("/metrics", promhttp.Handler())
 
 	return &http.Server{
-		Addr:    port,
-		Handler: g.GrpcHandlerFunc(server, mux),
+		Handler: mux,
 	}
 }
 
-func (g *Server) StartDynamicServer(port string, ctx context.Context, logger *zap.Logger, server *http.Server, gserver *grpc.Server) error {
-
-	conn, err := net.Listen("tcp", fmt.Sprintf(":%v", port))
-
-	conn = conntrack.NewListener(conn, conntrack.TrackWithTracing())
-
-	if err != nil {
-		return err
-	}
+func (g *Server) StartDebugger(listener net.Listener, ctx context.Context, logger *zap.Logger, server *http.Server) error {
 
 	e := make(chan error)
 
 	go func() {
 
-		logger.Debug("starting server", zap.String("addr", port))
+		logger.Debug("starting debug server")
 
-		e <- server.Serve(conn)
+		e <- server.Serve(listener)
 	}()
 
 	select {
 	case <-ctx.Done():
-		logger.Debug("closing server", zap.String("addr", port))
-		gserver.GracefulStop()
+		logger.Debug("closing debug server")
 		server.Shutdown(ctx)
 		return nil
 
@@ -238,6 +205,26 @@ func (g *Server) StartDynamicServer(port string, ctx context.Context, logger *za
 	}
 }
 
+func (g *Server) StartRpcServer(listener net.Listener, ctx context.Context, logger *zap.Logger, server *grpc.Server) error {
+
+	e := make(chan error)
+
+	go func() {
+
+		logger.Debug("starting rpc server")
+
+		e <- server.Serve(listener)
+	}()
+
+	select {
+	case <-ctx.Done():
+		logger.Debug("closing grpc server")
+		return nil
+
+	case err := <-e:
+		return err
+	}
+}
 func (g *Server) StartDynamicTLSServer(port string, ctx context.Context, logger *zap.Logger, server *http.Server, tlspath string, certpath string, gserver *grpc.Server) error {
 
 	conn, err := net.Listen("tcp", fmt.Sprintf(":%v", port))

@@ -8,6 +8,7 @@ require (
 	github.com/gogo/status v1.0.3
 	github.com/golang/protobuf v1.2.0
 	github.com/grpc-ecosystem/go-grpc-middleware v1.0.0
+	github.com/heptiolabs/healthcheck v0.0.0-20180807145615-6ff867650f40
 	github.com/matttproud/golang_protobuf_extensions v1.0.1 // indirect
 	github.com/mwitkow/go-conntrack v0.0.0-20161129095857-cc309e4a2223
 	github.com/mwitkow/go-grpc-middleware v1.0.0
@@ -20,6 +21,7 @@ require (
 	github.com/prometheus/common v0.0.0-20181120120127-aeab699e26f4 // indirect
 	github.com/prometheus/procfs v0.0.0-20181005140218-185b4288413d // indirect
 	github.com/sirupsen/logrus v1.2.0 // indirect
+	github.com/soheilhy/cmux v0.1.4
 	github.com/uber-go/atomic v1.3.2 // indirect
 	github.com/uber/jaeger-client-go v2.15.0+incompatible
 	github.com/uber/jaeger-lib v1.5.0

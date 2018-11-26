@@ -4,9 +4,12 @@ import (
 	"context"
 	"fmt"
 	"github.com/gofunct/gotilities/gotility"
-	"github.com/gofunct/gotilities/probe"
 	pb "github.com/gofunct/gotilities/proto/ping"
+	"github.com/heptiolabs/healthcheck"
+	"github.com/mwitkow/go-conntrack"
 	"github.com/prometheus/client_golang/prometheus"
+	"github.com/soheilhy/cmux"
+	"net"
 	"net/http"
 	"time"
 )
@@ -44,33 +47,58 @@ func main() {
 	defer closer.Close()
 
 	metrics := g.RegGrpcServerMetrics(true)
-	probing := g.MakeProbe(prometheus.DefaultRegisterer, "demo")
+	probe := healthcheck.NewMetricsHandler(prometheus.DefaultRegisterer, "demo")
 
-	probing.AddLivenessCheck("routine_threshold", probe.GoroutineCountCheck(500))
+	probe.AddLivenessCheck("routine_threshold", healthcheck.GoroutineCountCheck(500))
 
-	probing.AddReadinessCheck(
+	probe.AddReadinessCheck(
 		"google-dnscheck",
-		probe.DNSResolveCheck("google.com", 500*time.Millisecond))
+		healthcheck.DNSResolveCheck("google.com", 500*time.Millisecond))
 
-	probing.AddReadinessCheck("google-httpcheck",
-		probe.HTTPGetCheck("google.com", 500*time.Millisecond))
+	probe.AddReadinessCheck("google-httpcheck",
+		healthcheck.HTTPGetCheck("google.com", 500*time.Millisecond))
 
 	// Health check
-	probing.AddReadinessCheck(
+	probe.AddReadinessCheck(
 		"grpc",
-		probe.Timeout(func() error { return err }, time.Second*10))
+		healthcheck.Timeout(func() error { return err }, time.Second*10))
 
 	grpcServer := g.MakeGrpcServer(logger, tracer, metrics)
 
 	pb.RegisterDemoServiceServer(grpcServer, newDemoServer())
 
-	mux := http.NewServeMux()
+	conn, err := net.Listen("tcp", fmt.Sprintf(":%v", "8080"))
 
-	debugServer := g.MakeDebugServer(":8080", mux, ctx, grpcServer, probe, logger)
+	g.ZapErr(logger, "failed to create listener", err)
 
-	errsync.Go(func() error { return g.StartDynamicServer("8080", ctx, logger, debugServer, grpcServer) })
+	conn = conntrack.NewListener(conn, conntrack.TrackWithTracing())
+
+	m := http.NewServeMux()
+
+	mux := cmux.New(conn)
+
+	httpLis := mux.Match(cmux.HTTP1Fast())
+	grpcLis := mux.Match(cmux.HTTP2HeaderFieldPrefix("content-type", "application/grpc"))
+
+	debugServer := g.MakeDebugServer(m, ctx, grpcServer, probe, logger)
+
+	errsync.Go(func() error { return g.StartDebugger(httpLis, ctx, logger, debugServer) })
+	errsync.Go(func() error { return g.StartRpcServer(grpcLis, ctx, logger, grpcServer) })
+	errsync.Go(func() error { return mux.Serve() })
 
 	if err := errsync.Wait(); err != nil {
 		g.ZapErr(logger, "error sync problem: failed to close server", err)
 	}
+}
+
+func init() {
+	http.DefaultTransport.(*http.Transport).DialContext = conntrack.NewDialContextFunc(
+		conntrack.DialWithTracing(),
+		conntrack.DialWithDialer(&net.Dialer{
+			Timeout:   30,
+			KeepAlive: 30,
+		}),
+	)
+
+	conntrack.PreRegisterDialerMetrics("default")
 }
