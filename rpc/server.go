@@ -1,4 +1,4 @@
-package gotilities
+package rpc
 
 import (
 	"crypto/tls"
@@ -222,6 +222,7 @@ func (g *Server) StartDynamicServer(port string, ctx context.Context, logger *za
 	go func() {
 
 		logger.Debug("starting server", zap.String("addr", port))
+
 		e <- server.Serve(conn)
 	}()
 
@@ -340,8 +341,6 @@ func (g *Server) TlsConfigWithHttp2Enabled(config *tls.Config) (*tls.Config, err
 // connections or otherHandler otherwise. Copied from cockroachdb.
 func (g *Server) GrpcHandlerFunc(grpcServer *grpc.Server, otherHandler http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		// TODO(tamird): point to merged gRPC code rather than a PR.
-		// This is a partial recreation of gRPC's internal checks https://github.com/grpc/grpc-go/pull/514/files#diff-95e9a25b738459a2d3030e1e6fa2a718R61
 		if r.ProtoMajor == 2 && strings.Contains(r.Header.Get("Content-Type"), "application/grpc") {
 			grpcServer.ServeHTTP(w, r)
 		} else {

@@ -1,4 +1,4 @@
-package gotilities
+package zapper
 
 import (
 	"context"

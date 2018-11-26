@@ -1,4 +1,4 @@
-package gotilities
+package rpc
 
 import (
 	"fmt"

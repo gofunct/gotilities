@@ -4,7 +4,7 @@ import (
 	"bufio"
 	"context"
 	"fmt"
-	"github.com/gofunct/gotilities"
+	"github.com/gofunct/gotilities/gotility"
 	pb "github.com/gofunct/gotilities/proto/ping"
 	"go.uber.org/zap"
 	"os"
@@ -14,24 +14,24 @@ import (
 
 func main() {
 
-	var gotility gotilities.Gotility
+	var g gotility.Gotility
 
-	logger, err := gotility.MakeZapper(true)
+	logger, err := g.MakeZapper(true)
 
-	gotility.ZapErr(logger, "failed to create logger", err)
+	g.ZapErr(logger, "failed to create logger", err)
 
 	defer logger.Sync()
 
-	tracer, closer, err := gotility.MakeTracer("demo", logger)
+	tracer, closer, err := g.MakeTracer("demo", logger)
 
-	gotility.ZapErr(logger, "failed to create tracer", err)
+	g.ZapErr(logger, "failed to create tracer", err)
 
 	defer closer.Close()
 
-	metrics := gotility.RegGrpcServerMetrics(false)
+	metrics := g.RegGrpcServerMetrics(false)
 
-	conn, err := gotility.MakeGrpcClient("8080", tracer, metrics)
-	gotility.ZapErr(logger, "failed to create grpc dialer", err)
+	conn, err := g.MakeGrpcClient("8080", tracer, metrics)
+	g.ZapErr(logger, "failed to create grpc dialer", err)
 
 	defer conn.Close()
 
