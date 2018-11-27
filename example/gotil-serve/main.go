@@ -4,14 +4,21 @@ import (
 	"context"
 	"fmt"
 	"github.com/gofunct/gotilities/gotility"
+	"github.com/gofunct/gotilities/instrument/metrics"
 	pb "github.com/gofunct/gotilities/proto/ping"
+	"github.com/grpc-ecosystem/go-grpc-prometheus"
 	"github.com/heptiolabs/healthcheck"
-	"github.com/mwitkow/go-conntrack"
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/soheilhy/cmux"
 	"net"
 	"net/http"
 	"time"
+)
+
+var(
+	reg = prometheus.NewRegistry()
+	grpcMetrics = grpc_prometheus.NewServerMetrics()
+
 )
 
 // DemoServiceServer defines a Server.
@@ -29,6 +36,7 @@ func (s *DemoServiceServer) SayHello(ctx context.Context, request *pb.HelloReque
 var g gotility.Gotility
 
 func main() {
+	reg.MustRegister(grpcMetrics)
 
 	ctx, cancel, errsync := g.MakeErrGrpWithDeadline(120)
 
@@ -46,7 +54,6 @@ func main() {
 
 	defer closer.Close()
 
-	metrics := g.RegGrpcServerMetrics(true)
 	probe := healthcheck.NewMetricsHandler(prometheus.DefaultRegisterer, "demo")
 
 	probe.AddLivenessCheck("routine_threshold", healthcheck.GoroutineCountCheck(500))
@@ -63,7 +70,7 @@ func main() {
 		"grpc",
 		healthcheck.Timeout(func() error { return err }, time.Second*10))
 
-	grpcServer := g.MakeGrpcServer(logger, tracer, metrics)
+	grpcServer := g.MakeGrpcServer(logger, tracer)
 
 	pb.RegisterDemoServiceServer(grpcServer, newDemoServer())
 
@@ -71,8 +78,10 @@ func main() {
 
 	g.ZapErr(logger, "failed to create listener", err)
 
-	conn = conntrack.NewListener(conn, conntrack.TrackWithTracing())
-
+	//register listener metrics
+	conn = metrics.WrapListener(conn, reg, "IAM:cert", true, true)
+	// Initialize all metrics.
+	grpcMetrics.InitializeMetrics(grpcServer)
 	m := http.NewServeMux()
 
 	mux := cmux.New(conn)
@@ -89,16 +98,4 @@ func main() {
 	if err := errsync.Wait(); err != nil {
 		g.ZapErr(logger, "error sync problem: failed to close server", err)
 	}
-}
-
-func init() {
-	http.DefaultTransport.(*http.Transport).DialContext = conntrack.NewDialContextFunc(
-		conntrack.DialWithTracing(),
-		conntrack.DialWithDialer(&net.Dialer{
-			Timeout:   30,
-			KeepAlive: 30,
-		}),
-	)
-
-	conntrack.PreRegisterDialerMetrics("default")
 }
