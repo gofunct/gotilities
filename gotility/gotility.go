@@ -1,11 +1,11 @@
 package gotility
 
 import (
-	"github.com/gofunct/gotilities/probe"
+	"github.com/gofunct/gotilities/instrument/probe"
+	"github.com/gofunct/gotilities/instrument/tracer"
+	"github.com/gofunct/gotilities/instrument/zapper"
 	"github.com/gofunct/gotilities/rpc"
 	"github.com/gofunct/gotilities/syncer"
-	"github.com/gofunct/gotilities/tracer"
-	"github.com/gofunct/gotilities/zapper"
 )
 
 type Gotility struct {
